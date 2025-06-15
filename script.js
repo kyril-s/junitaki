@@ -34,6 +34,10 @@ let isPaused = true;
 let startTime = 0;
 let lastSentTimeLeft = null;
 let lastReceivedState = {};
+let myName = null;
+let isMaster = false;
+let clientList = [];
+let masterId = null;
 
 // Meeting type configurations
 const meetingConfigs = {
@@ -82,6 +86,29 @@ socket.on('timerState', (state) => {
     if (!isPaused && phases.length > 0) {
         startTimerInterval();
     }
+});
+
+// Listen for yourName from server
+socket.on('yourName', (name) => {
+    myName = name;
+    updateUserInfoBar();
+});
+
+// Listen for roomClients from server
+socket.on('roomClients', ({ clients, master }) => {
+    clientList = clients;
+    masterId = master;
+    isMaster = (masterId === socket.id);
+    updateUserInfoBar();
+    // Show/hide controls based on master status
+    const controls = document.querySelectorAll('.control-btn, .task-control-btn, #addTaskBtn');
+    controls.forEach(btn => {
+        if (isMaster) {
+            btn.removeAttribute('disabled');
+        } else {
+            btn.setAttribute('disabled', 'disabled');
+        }
+    });
 });
 
 // Action emitters
@@ -385,4 +412,39 @@ function copyRoomLink() {
 }
 
 // Update room ID display
-document.getElementById('roomId').textContent = roomId; 
+document.getElementById('roomId').textContent = roomId;
+
+// Add UI for user name and master status
+document.addEventListener('DOMContentLoaded', () => {
+    const infoBar = document.createElement('div');
+    infoBar.id = 'userInfoBar';
+    infoBar.style.margin = '10px 0';
+    document.querySelector('.container').insertBefore(infoBar, document.querySelector('.controls-container'));
+});
+
+function updateUserInfoBar() {
+    const infoBar = document.getElementById('userInfoBar');
+    if (!infoBar) return;
+    let html = `<b>Tu nombre:</b> ${myName ? myName : ''}`;
+    if (isMaster) {
+        html += ' <span style="color: #4CAF50;">(Room Master)</span>';
+    }
+    if (clientList.length > 1 && isMaster) {
+        html += '<br><label for="passMasterSelect">Pasar control a: </label>';
+        html += '<select id="passMasterSelect">';
+        clientList.forEach(c => {
+            if (c.id !== socket.id) {
+                html += `<option value="${c.id}">${c.name}</option>`;
+            }
+        });
+        html += '</select>';
+        html += '<button id="passMasterBtn">Pasar Master</button>';
+    }
+    infoBar.innerHTML = html;
+    if (isMaster && clientList.length > 1) {
+        document.getElementById('passMasterBtn').onclick = () => {
+            const toId = document.getElementById('passMasterSelect').value;
+            socket.emit('passMaster', { roomId, toId });
+        };
+    }
+} 

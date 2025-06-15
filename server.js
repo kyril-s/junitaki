@@ -28,8 +28,20 @@ const io = socketIo(server, {
     }
 });
 
+const animalNames = [
+    "Zorro", "Lobo", "Gato", "Perro", "Oso", "Águila", "Tigre", "León", "Conejo", "Ratón", "Caballo", "Vaca", "Cerdo", "Mono", "Pato", "Pez", "Tortuga", "Serpiente", "Cangrejo", "Pulpo"
+];
+
+function getRandomAnimalName(usedNames = []) {
+    const available = animalNames.filter(name => !usedNames.includes(name));
+    if (available.length === 0) return `Animal${Math.floor(Math.random()*1000)}`;
+    return available[Math.floor(Math.random() * available.length)];
+}
+
 // Store room states
 const rooms = new Map();
+const roomClients = new Map(); // roomId -> [{id, name}]
+const roomMasters = new Map(); // roomId -> socketId
 const roomTimers = new Map();
 
 function getDefaultRoomState() {
@@ -43,7 +55,10 @@ function getDefaultRoomState() {
 
 function broadcastRoom(roomId) {
     const state = rooms.get(roomId);
+    const clients = roomClients.get(roomId) || [];
+    const master = roomMasters.get(roomId) || null;
     io.to(roomId).emit('timerState', state);
+    io.to(roomId).emit('roomClients', { clients, master });
 }
 
 function startRoomTimer(roomId) {
@@ -75,19 +90,36 @@ function startRoomTimer(roomId) {
 }
 
 io.on('connection', (socket) => {
-    console.log('New client connected');
+    let myRoom = null;
+    let myName = null;
 
     socket.on('joinRoom', (roomId) => {
-        console.log(`Client joining room: ${roomId}`);
+        myRoom = roomId;
         socket.join(roomId);
         if (!rooms.has(roomId)) {
             rooms.set(roomId, getDefaultRoomState());
         }
-        // Send current state to the new user
+        // Assign random animal name
+        const clients = roomClients.get(roomId) || [];
+        myName = getRandomAnimalName(clients.map(c => c.name));
+        clients.push({ id: socket.id, name: myName });
+        roomClients.set(roomId, clients);
+        // Assign master if none
+        if (!roomMasters.has(roomId)) {
+            roomMasters.set(roomId, socket.id);
+        }
+        socket.emit('yourName', myName);
         socket.emit('timerState', rooms.get(roomId));
+        broadcastRoom(roomId);
     });
 
+    // Only master can control the timer
+    function isMaster(roomId, socketId) {
+        return roomMasters.get(roomId) === socketId;
+    }
+
     socket.on('addTask', ({ roomId, task }) => {
+        if (!isMaster(roomId, socket.id)) return;
         const room = rooms.get(roomId);
         if (room) {
             room.phases.push(task);
@@ -96,6 +128,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('removeTask', ({ roomId, index }) => {
+        if (!isMaster(roomId, socket.id)) return;
         const room = rooms.get(roomId);
         if (room && room.phases[index]) {
             room.phases.splice(index, 1);
@@ -107,6 +140,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('updateTask', ({ roomId, index, task }) => {
+        if (!isMaster(roomId, socket.id)) return;
         const room = rooms.get(roomId);
         if (room && room.phases[index]) {
             room.phases[index] = task;
@@ -115,6 +149,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('setPhases', ({ roomId, phases }) => {
+        if (!isMaster(roomId, socket.id)) return;
         const room = rooms.get(roomId);
         if (room) {
             room.phases = phases;
@@ -126,6 +161,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('startTimer', ({ roomId, index }) => {
+        if (!isMaster(roomId, socket.id)) return;
         const room = rooms.get(roomId);
         if (room && room.phases[index]) {
             room.currentPhaseIndex = index;
@@ -137,6 +173,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('pauseTimer', ({ roomId }) => {
+        if (!isMaster(roomId, socket.id)) return;
         const room = rooms.get(roomId);
         if (room) {
             room.isPaused = true;
@@ -149,6 +186,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('resetTimer', ({ roomId }) => {
+        if (!isMaster(roomId, socket.id)) return;
         const room = rooms.get(roomId);
         if (room && room.phases.length > 0) {
             room.currentPhaseIndex = 0;
@@ -159,6 +197,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('skipTask', ({ roomId }) => {
+        if (!isMaster(roomId, socket.id)) return;
         const room = rooms.get(roomId);
         if (room && room.currentPhaseIndex < room.phases.length - 1) {
             room.currentPhaseIndex++;
@@ -169,6 +208,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('updateTimeLeft', ({ roomId, timeLeft }) => {
+        if (!isMaster(roomId, socket.id)) return;
         const room = rooms.get(roomId);
         if (room) {
             room.timeLeft = timeLeft;
@@ -176,8 +216,30 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Pass master
+    socket.on('passMaster', ({ roomId, toId }) => {
+        if (!isMaster(roomId, socket.id)) return;
+        if (roomClients.has(roomId) && roomClients.get(roomId).some(c => c.id === toId)) {
+            roomMasters.set(roomId, toId);
+            broadcastRoom(roomId);
+        }
+    });
+
     socket.on('disconnect', () => {
-        console.log('Client disconnected');
+        if (myRoom && roomClients.has(myRoom)) {
+            let clients = roomClients.get(myRoom);
+            clients = clients.filter(c => c.id !== socket.id);
+            roomClients.set(myRoom, clients);
+            // If master left, assign to next client
+            if (roomMasters.get(myRoom) === socket.id) {
+                if (clients.length > 0) {
+                    roomMasters.set(myRoom, clients[0].id);
+                } else {
+                    roomMasters.delete(myRoom);
+                }
+            }
+            broadcastRoom(myRoom);
+        }
     });
 });
 
