@@ -153,12 +153,12 @@ function createTaskCard(task, index) {
     <div class="task-card ${isActive ? 'active' : ''}" data-index="${index}">
         <div class="task-card-content">
             <div class="task-header">
-                <input type="text" class="task-name" value="${task.name}" placeholder="Task name">
+                <input type="text" class="task-name" id="task-name-${index}" name="task-name-${index}" value="${task.name}" placeholder="Task name">
             </div>
             <div class="time-input">
-            <input type="text" class="minutes" value="${Math.floor(task.duration / 60)}" maxlength="2" placeholder="00">
+            <input type="text" class="minutes" id="minutes-${index}" name="minutes-${index}" value="${Math.floor(task.duration / 60)}" maxlength="2" placeholder="00">
             <span>:</span>
-            <input type="text" class="seconds" value="${task.duration % 60}" maxlength="2" placeholder="00">
+            <input type="text" class="seconds" id="seconds-${index}" name="seconds-${index}" value="${task.duration % 60}" maxlength="2" placeholder="00">
             </div>
         </div>
             <div class="task-controls">
@@ -289,9 +289,9 @@ function skipTask(index) {
 
 // Update timer display
 function updateDisplay() {
-    timeDisplay.textContent = formatTime(timeLeft);
-    if (phases.length > 0) {
-        currentPhaseDisplay.textContent = phases[currentPhaseIndex].name;
+    if (phases.length > 0 && typeof currentPhaseIndex === 'number') {
+        if (currentPhaseDisplay) currentPhaseDisplay.textContent = phases[currentPhaseIndex].name;
+        if (timeDisplay) timeDisplay.textContent = formatTime(timeLeft);
     }
 }
 
