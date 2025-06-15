@@ -47,19 +47,17 @@ body {
   gap: var(--gap);
   margin-top: var(--space-md);
   width: 100%;
+  flex-wrap: nowrap;
 }
 
 /* Column layout: cards left, timer right */
-.cards-column {
-  flex: 1 1 350px;
-  max-width: 480px;
-  min-width: 280px;
+.cards-column, .timer-column {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
   align-items: flex-start;
   display: flex;
   flex-direction: column;
-  gap: var(--gap);
-  transition: max-width 0.3s, opacity 0.3s, margin 0.3s;
-  opacity: 1;
 }
 .cards-column.collapsed {
   max-width: 0;
@@ -68,13 +66,7 @@ body {
   pointer-events: none;
 }
 .timer-column {
-  flex: 1 1 350px;
-  min-width: 320px;
-  max-width: 520px;
-  display: flex;
-  flex-direction: column;
   justify-content: flex-start;
-  align-items: flex-start;
 }
 
 #userInfoBar {
@@ -137,15 +129,10 @@ body {
   transform: rotate(-90deg);
 }
 
-.controls-container {
+.controls-container, .timer-container {
   width: 100%;
-  max-width: 480px;
-  min-width: 260px;
-  background: var(--color-surface-alt);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
-  padding: var(--space-md);
-  margin-bottom: var(--space-lg);
+  min-width: 0;
+  max-width: 600px;
 }
 
 .controls-header {
@@ -458,15 +445,15 @@ body {
   width: 100%;
   display: flex;
   flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
+  justify-content: flex-start;
   padding: var(--space-lg) var(--space-lg) var(--space-md) var(--space-lg);
   background: var(--color-surface-alt);
   border-bottom: 1px solid var(--color-border);
   box-shadow: 0 1px 4px var(--color-shadow);
   margin-bottom: 0;
   z-index: 20;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 .main-title {
   font-size: 2.5rem;
@@ -486,6 +473,8 @@ body {
   border: 1px solid var(--color-border);
   white-space: nowrap;
   min-width: 0;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 .top-room-info code {
   font-size: 1.1em;
@@ -508,6 +497,7 @@ body {
     align-items: stretch;
     gap: var(--space-sm);
     padding: var(--space-md);
+    flex-wrap: wrap;
   }
   .main-title {
     text-align: center;
@@ -519,11 +509,13 @@ body {
     width: fit-content;
     font-size: 1rem;
     flex-wrap: wrap;
+    margin-left: 0;
   }
   .container {
     flex-direction: column;
     align-items: stretch;
     margin-top: var(--space-md);
+    flex-wrap: wrap;
   }
   .cards-column, .timer-column {
     align-items: stretch;
