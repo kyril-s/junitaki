@@ -9,22 +9,22 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
+    <div class="top-bar">
+        <h1 class="main-title">Team Timer</h1>
+        <div class="room-info top-room-info">
+            <span>Room:</span>
+            <code id="roomId"></code>
+            <button class="copy-btn" onclick="copyRoomLink()" title="Copy room link">
+                <i class="fas fa-copy"></i>
+            </button>
+        </div>
+    </div>
     <div id="userInfoBar">
         <button id="mainCollapseBtn" class="collapse-btn" title="Show/hide tasks">▼</button>
     </div>
     <div class="container">
         <div class="cards-column">
             <div class="controls-container">
-                <div class="controls-header">
-                    <h1>Team Timer</h1>
-                    <div class="room-info">
-                        <span>Room:</span>
-                        <code id="roomId"></code>
-                        <button class="copy-btn" onclick="copyRoomLink()" title="Copy room link">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
-                </div>
                 <div class="controls-content">
                     <div class="meeting-type">
                         <label for="meetingType">Meeting Type:</label>

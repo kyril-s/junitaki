@@ -236,6 +236,7 @@ function updateTaskGrid() {
     taskGrid.innerHTML = phases.map((task, index) => createTaskCard(task, index)).join('');
     attachTaskInputListeners();
     updateTimerVisibility();
+    updateTimerButtonStates();
 }
 
 // Update timer visibility
@@ -358,6 +359,7 @@ function updateDisplay() {
         if (currentPhaseDisplay) currentPhaseDisplay.textContent = phases[currentPhaseIndex].name;
         if (timeDisplay) timeDisplay.textContent = formatTime(timeLeft);
     }
+    updateTimerButtonStates();
 }
 
 // Play alert sound
@@ -491,5 +493,16 @@ if (mainCollapseBtn && cardsColumn) {
     mainCollapseBtn.addEventListener('click', () => {
         cardsColumn.classList.toggle('collapsed');
         mainCollapseBtn.classList.toggle('collapsed');
+    });
+}
+
+function updateTimerButtonStates() {
+    // Timer controls
+    if (startBtn) startBtn.disabled = !isPaused || phases.length === 0;
+    if (pauseBtn) pauseBtn.disabled = isPaused || phases.length === 0;
+    if (stopBtn) stopBtn.disabled = isPaused || phases.length === 0;
+    // Task card play buttons
+    document.querySelectorAll('.task-control-btn.play-btn').forEach(btn => {
+        btn.disabled = !isPaused || phases.length === 0;
     });
 } 
