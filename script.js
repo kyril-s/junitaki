@@ -78,6 +78,7 @@ socket.on('timerState', (state) => {
     }
     updateDisplay();
     updateTaskGrid();
+    updateTimerVisibility();
     if (!isPaused && phases.length > 0) {
         startTimerInterval();
     }
@@ -185,10 +186,6 @@ function updateTaskGrid() {
 function updateTimerVisibility() {
     if (phases.length > 0) {
         timerContainer.classList.remove('hidden');
-        currentPhaseDisplay.textContent = phases[currentPhaseIndex].name;
-        timeLeft = phases[currentPhaseIndex].duration;
-        updateDisplay();
-        scrollToTimer();
     } else {
         timerContainer.classList.add('hidden');
         pauseTimer();
@@ -289,6 +286,7 @@ function skipTask(index) {
 
 // Update timer display
 function updateDisplay() {
+    console.log('Updating timer display:', timeLeft);
     if (phases.length > 0 && typeof currentPhaseIndex === 'number') {
         if (currentPhaseDisplay) currentPhaseDisplay.textContent = phases[currentPhaseIndex].name;
         if (timeDisplay) timeDisplay.textContent = formatTime(timeLeft);
