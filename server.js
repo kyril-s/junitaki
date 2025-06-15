@@ -30,6 +30,7 @@ const io = socketIo(server, {
 
 // Store room states
 const rooms = new Map();
+const roomTimers = new Map();
 
 function getDefaultRoomState() {
     return {
@@ -43,6 +44,34 @@ function getDefaultRoomState() {
 function broadcastRoom(roomId) {
     const state = rooms.get(roomId);
     io.to(roomId).emit('timerState', state);
+}
+
+function startRoomTimer(roomId) {
+    if (roomTimers.has(roomId)) clearInterval(roomTimers.get(roomId));
+    const interval = setInterval(() => {
+        const room = rooms.get(roomId);
+        if (!room || room.isPaused || room.phases.length === 0) {
+            clearInterval(interval);
+            roomTimers.delete(roomId);
+            return;
+        }
+        room.timeLeft = Math.max(0, room.timeLeft - 1);
+        if (room.timeLeft === 0) {
+            // Move to next phase or pause
+            if (room.currentPhaseIndex < room.phases.length - 1) {
+                room.currentPhaseIndex++;
+                room.timeLeft = room.phases[room.currentPhaseIndex].duration;
+            } else {
+                room.isPaused = true;
+            }
+        }
+        broadcastRoom(roomId);
+        if (room.isPaused) {
+            clearInterval(interval);
+            roomTimers.delete(roomId);
+        }
+    }, 1000); // 1 second interval
+    roomTimers.set(roomId, interval);
 }
 
 io.on('connection', (socket) => {
@@ -103,6 +132,7 @@ io.on('connection', (socket) => {
             room.timeLeft = room.phases[index].duration;
             room.isPaused = false;
             broadcastRoom(roomId);
+            startRoomTimer(roomId); // Start the server timer!
         }
     });
 
@@ -111,6 +141,10 @@ io.on('connection', (socket) => {
         if (room) {
             room.isPaused = true;
             broadcastRoom(roomId);
+            if (roomTimers.has(roomId)) {
+                clearInterval(roomTimers.get(roomId));
+                roomTimers.delete(roomId);
+            }
         }
     });
 

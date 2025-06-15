@@ -377,6 +377,7 @@ function copyRoomLink() {
     const roomLink = window.location.href;
     navigator.clipboard.writeText(roomLink).then(() => {
         const copyBtn = document.querySelector('.copy-btn');
+        if (!copyBtn) return;
         const originalIcon = copyBtn.innerHTML;
         copyBtn.innerHTML = '<i class="fas fa-check"></i>';
         setTimeout(() => {
