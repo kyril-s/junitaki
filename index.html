@@ -9,8 +9,10 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
+    <div id="userInfoBar">
+        <button id="mainCollapseBtn" class="collapse-btn" title="Show/hide tasks">▼</button>
+    </div>
     <div class="container">
-        <div id="userInfoBar"></div>
         <div class="cards-column">
             <div class="controls-container">
                 <div class="controls-header">
@@ -22,7 +24,6 @@
                             <i class="fas fa-copy"></i>
                         </button>
                     </div>
-                    <button class="collapse-btn" onclick="toggleControls()">▼</button>
                 </div>
                 <div class="controls-content">
                     <div class="meeting-type">

@@ -482,4 +482,14 @@ function updateUserInfoBar() {
             };
         }
     }
+}
+
+// Main collapse button logic for cards column
+const mainCollapseBtn = document.getElementById('mainCollapseBtn');
+const cardsColumn = document.querySelector('.cards-column');
+if (mainCollapseBtn && cardsColumn) {
+    mainCollapseBtn.addEventListener('click', () => {
+        cardsColumn.classList.toggle('collapsed');
+        mainCollapseBtn.classList.toggle('collapsed');
+    });
 } 

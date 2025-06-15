@@ -57,6 +57,15 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--gap);
+  transition: max-width 0.3s, opacity 0.3s, margin 0.3s;
+  max-width: 600px;
+  opacity: 1;
+}
+.cards-column.collapsed {
+  max-width: 0;
+  opacity: 0;
+  margin-right: -40px;
+  pointer-events: none;
 }
 .timer-column {
   flex: 1 1 350px;
@@ -67,17 +76,19 @@ body {
 }
 
 #userInfoBar {
-  background: var(--color-surface-alt);
-  color: var(--color-onSurface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
-  box-shadow: 0 1px 4px var(--color-shadow);
-  padding: var(--space-sm) var(--space-md);
-  margin-bottom: var(--space-md);
-  font-size: var(--font-size-lg);
+  width: 100%;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-surface-alt);
+  color: var(--color-onSurface);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 1px 4px var(--color-shadow);
+  font-size: var(--font-size-lg);
+  margin-bottom: 0;
+  z-index: 10;
 }
 #userInfoBar b {
   color: var(--color-primary);
@@ -88,12 +99,15 @@ body {
   font-weight: 500;
   margin-left: var(--space-xs);
 }
-#userInfoBar select, #userInfoBar button {
+#userInfoBar label, #userInfoBar select, #userInfoBar button {
   margin-left: var(--space-sm);
   font-size: var(--font-size-base);
   border-radius: var(--border-radius);
   border: 1px solid var(--color-border);
   padding: var(--space-xs) var(--space-sm);
+}
+#userInfoBar select {
+  min-width: 120px;
 }
 #userInfoBar button {
   background: var(--color-primary);
@@ -104,6 +118,21 @@ body {
 }
 #userInfoBar button:hover {
   background: var(--color-primary-hover);
+}
+
+#mainCollapseBtn {
+  margin-left: auto;
+  font-size: 1.5em;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  color: var(--color-onSurface);
+  cursor: pointer;
+  padding: var(--space-xs) var(--space-md);
+  transition: background 0.2s, transform 0.2s;
+}
+#mainCollapseBtn.collapsed {
+  transform: rotate(-90deg);
 }
 
 .controls-container {
@@ -424,6 +453,17 @@ body {
   }
   .timer-column {
     min-width: 0;
+  }
+  #userInfoBar {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--space-md);
+    gap: var(--space-sm);
+  }
+  .timer-controls, .task-controls, .timer-buttons-main, .timer-buttons-other {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-sm);
   }
 }
 @media (max-width: 700px) {
