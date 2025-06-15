@@ -31,6 +31,20 @@ const io = socketIo(server, {
 // Store room states
 const rooms = new Map();
 
+function getDefaultRoomState() {
+    return {
+        currentPhaseIndex: 0,
+        timeLeft: 0,
+        isPaused: true,
+        phases: []
+    };
+}
+
+function broadcastRoom(roomId) {
+    const state = rooms.get(roomId);
+    io.to(roomId).emit('timerState', state);
+}
+
 io.on('connection', (socket) => {
     console.log('New client connected');
 
@@ -38,26 +52,93 @@ io.on('connection', (socket) => {
         console.log(`Client joining room: ${roomId}`);
         socket.join(roomId);
         if (!rooms.has(roomId)) {
-            rooms.set(roomId, {
-                currentPhaseIndex: 0,
-                timeLeft: 0,
-                isPaused: true,
-                phases: []
-            });
+            rooms.set(roomId, getDefaultRoomState());
         }
         // Send current state to the new user
         socket.emit('timerState', rooms.get(roomId));
     });
 
-    socket.on('updateTimer', (data) => {
-        const { roomId, state } = data;
-        console.log(`Updating room ${roomId}:`, state);
-        
-        if (rooms.has(roomId)) {
-            // Update the room state
-            rooms.set(roomId, state);
-            // Broadcast to all clients in the room except the sender
-            socket.to(roomId).emit('timerState', state);
+    socket.on('addTask', ({ roomId, task }) => {
+        const room = rooms.get(roomId);
+        if (room) {
+            room.phases.push(task);
+            broadcastRoom(roomId);
+        }
+    });
+
+    socket.on('removeTask', ({ roomId, index }) => {
+        const room = rooms.get(roomId);
+        if (room && room.phases[index]) {
+            room.phases.splice(index, 1);
+            if (room.currentPhaseIndex >= room.phases.length) {
+                room.currentPhaseIndex = Math.max(0, room.phases.length - 1);
+            }
+            broadcastRoom(roomId);
+        }
+    });
+
+    socket.on('updateTask', ({ roomId, index, task }) => {
+        const room = rooms.get(roomId);
+        if (room && room.phases[index]) {
+            room.phases[index] = task;
+            broadcastRoom(roomId);
+        }
+    });
+
+    socket.on('setPhases', ({ roomId, phases }) => {
+        const room = rooms.get(roomId);
+        if (room) {
+            room.phases = phases;
+            room.currentPhaseIndex = 0;
+            room.timeLeft = phases[0] ? phases[0].duration : 0;
+            room.isPaused = true;
+            broadcastRoom(roomId);
+        }
+    });
+
+    socket.on('startTimer', ({ roomId, index }) => {
+        const room = rooms.get(roomId);
+        if (room && room.phases[index]) {
+            room.currentPhaseIndex = index;
+            room.timeLeft = room.phases[index].duration;
+            room.isPaused = false;
+            broadcastRoom(roomId);
+        }
+    });
+
+    socket.on('pauseTimer', ({ roomId }) => {
+        const room = rooms.get(roomId);
+        if (room) {
+            room.isPaused = true;
+            broadcastRoom(roomId);
+        }
+    });
+
+    socket.on('resetTimer', ({ roomId }) => {
+        const room = rooms.get(roomId);
+        if (room && room.phases.length > 0) {
+            room.currentPhaseIndex = 0;
+            room.timeLeft = room.phases[0].duration;
+            room.isPaused = true;
+            broadcastRoom(roomId);
+        }
+    });
+
+    socket.on('skipTask', ({ roomId }) => {
+        const room = rooms.get(roomId);
+        if (room && room.currentPhaseIndex < room.phases.length - 1) {
+            room.currentPhaseIndex++;
+            room.timeLeft = room.phases[room.currentPhaseIndex].duration;
+            room.isPaused = true;
+            broadcastRoom(roomId);
+        }
+    });
+
+    socket.on('updateTimeLeft', ({ roomId, timeLeft }) => {
+        const room = rooms.get(roomId);
+        if (room) {
+            room.timeLeft = timeLeft;
+            broadcastRoom(roomId);
         }
     });
 

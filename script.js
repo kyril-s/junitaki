@@ -25,14 +25,13 @@ const alertSound = document.getElementById('alertSound');
 const controlsContent = document.querySelector('.controls-content');
 const collapseBtn = document.querySelector('.collapse-btn');
 
-// Timer state
+// Timer state (only updated from server)
 let timer = null;
 let timeLeft = 0;
 let currentPhaseIndex = 0;
 let phases = [];
 let isPaused = true;
 let startTime = 0;
-let isLocalUpdate = false;
 
 // Meeting type configurations
 const meetingConfigs = {
@@ -62,50 +61,75 @@ socket.on('connect', () => {
 socket.on('timerState', (state) => {
     console.log('Received timer state:', state);
     
-    // Ignore updates if this is a local update
-    if (isLocalUpdate) {
-        isLocalUpdate = false;
-        return;
+    // Update local state from server
+    phases = state.phases;
+    currentPhaseIndex = state.currentPhaseIndex;
+    timeLeft = state.timeLeft;
+    isPaused = state.isPaused;
+    
+    // Clear any running timer
+    if (timer) {
+        clearInterval(timer);
+        timer = null;
     }
 
-    if (state.phases.length > 0) {
-        // Clear existing timer
-        if (timer) {
-            clearInterval(timer);
-            timer = null;
-        }
-
-        // Update local state
-        phases = state.phases;
-        currentPhaseIndex = state.currentPhaseIndex;
-        timeLeft = state.timeLeft;
-        isPaused = state.isPaused;
-        
-        // Update UI
-        updateDisplay();
-        updateTaskGrid();
-        
-        // Start timer if not paused
-        if (!isPaused && timeLeft > 0) {
-            startTimer();
-        }
+    // Update UI
+    updateDisplay();
+    updateTaskGrid();
+    
+    // Start timer if not paused
+    if (!isPaused && phases.length > 0) {
+        startTimerInterval();
     }
 });
 
-// Emit timer state updates
-function emitTimerState() {
-    isLocalUpdate = true;
-    const state = {
-        currentPhaseIndex,
-        timeLeft,
-        isPaused,
-        phases
-    };
-    console.log('Emitting timer state:', state);
-    socket.emit('updateTimer', {
-        roomId,
-        state
-    });
+// Action emitters
+function emitAddTask(task) {
+    socket.emit('addTask', { roomId, task });
+}
+function emitRemoveTask(index) {
+    socket.emit('removeTask', { roomId, index });
+}
+function emitUpdateTask(index, task) {
+    socket.emit('updateTask', { roomId, index, task });
+}
+function emitSetPhases(phases) {
+    socket.emit('setPhases', { roomId, phases });
+}
+function emitStartTimer(index) {
+    socket.emit('startTimer', { roomId, index });
+}
+function emitPauseTimer() {
+    socket.emit('pauseTimer', { roomId });
+}
+function emitResetTimer() {
+    socket.emit('resetTimer', { roomId });
+}
+function emitSkipTask() {
+    socket.emit('skipTask', { roomId });
+}
+function emitUpdateTimeLeft(timeLeft) {
+    socket.emit('updateTimeLeft', { roomId, timeLeft });
+}
+
+// Timer interval (only runs if not paused)
+function startTimerInterval() {
+    if (timer) clearInterval(timer);
+    startTime = Date.now() - (phases[currentPhaseIndex].duration - timeLeft) * 1000;
+    timer = setInterval(() => {
+        const now = Date.now();
+        const elapsed = Math.floor((now - startTime) / 1000);
+        const newTimeLeft = Math.max(0, phases[currentPhaseIndex].duration - elapsed);
+        if (newTimeLeft !== timeLeft) {
+            emitUpdateTimeLeft(newTimeLeft);
+        }
+        if (newTimeLeft <= 0) {
+            clearInterval(timer);
+            timer = null;
+            playAlert();
+            emitSkipTask();
+        }
+    }, 250);
 }
 
 // Toggle controls visibility
@@ -189,7 +213,8 @@ function attachTaskInputListeners() {
         const secondsInput = card.querySelector('.seconds');
 
         nameInput.addEventListener('change', (e) => {
-            phases[index].name = e.target.value;
+            const task = { ...phases[index], name: e.target.value };
+            emitUpdateTask(index, task);
             if (index === currentPhaseIndex) {
                 currentPhaseDisplay.textContent = e.target.value;
             }
@@ -198,9 +223,10 @@ function attachTaskInputListeners() {
         minutesInput.addEventListener('change', (e) => {
             const minutes = parseInt(e.target.value) || 0;
             const seconds = parseInt(secondsInput.value) || 0;
-            phases[index].duration = (minutes * 60) + seconds;
+            const task = { ...phases[index], duration: (minutes * 60) + seconds };
+            emitUpdateTask(index, task);
             if (index === currentPhaseIndex) {
-                timeLeft = phases[index].duration;
+                timeLeft = task.duration;
                 updateDisplay();
             }
         });
@@ -208,9 +234,10 @@ function attachTaskInputListeners() {
         secondsInput.addEventListener('change', (e) => {
             const minutes = parseInt(minutesInput.value) || 0;
             const seconds = parseInt(e.target.value) || 0;
-            phases[index].duration = (minutes * 60) + seconds;
+            const task = { ...phases[index], duration: (minutes * 60) + seconds };
+            emitUpdateTask(index, task);
             if (index === currentPhaseIndex) {
-                timeLeft = phases[index].duration;
+                timeLeft = task.duration;
                 updateDisplay();
             }
         });
@@ -225,7 +252,7 @@ function addTask() {
     };
     phases.push(task);
     updateTaskGrid();
-    emitTimerState();
+    emitAddTask(task);
 }
 
 // Remove task
@@ -233,12 +260,11 @@ function removeTask(index) {
     if (index === currentPhaseIndex && timer) {
         pauseTimer();
     }
-    phases.splice(index, 1);
+    emitRemoveTask(index);
     if (index < currentPhaseIndex) {
         currentPhaseIndex--;
     }
     updateTaskGrid();
-    emitTimerState();
 }
 
 // Start task timer
@@ -249,14 +275,14 @@ function startTaskTimer(index) {
     currentPhaseIndex = index;
     timeLeft = phases[index].duration;
     updateDisplay();
-    startTimer();
+    emitStartTimer(index);
     updateTaskGrid();
 }
 
 // Skip task
 function skipTask(index) {
     if (index === currentPhaseIndex) {
-        moveToNextPhase();
+        emitSkipTask();
     }
 }
 
@@ -266,39 +292,13 @@ function updateDisplay() {
     if (phases.length > 0) {
         currentPhaseDisplay.textContent = phases[currentPhaseIndex].name;
     }
-    emitTimerState();
+    emitUpdateTimeLeft(timeLeft);
 }
 
 // Play alert sound
 function playAlert() {
     alertSound.currentTime = 0;
     alertSound.play();
-}
-
-// Start timer
-function startTimer() {
-    if (timer) {
-        clearInterval(timer);
-    }
-    
-    isPaused = false;
-    startTime = Date.now() - (phases[currentPhaseIndex].duration - timeLeft) * 1000;
-    
-    timer = setInterval(() => {
-        const now = Date.now();
-        const elapsed = Math.floor((now - startTime) / 1000);
-        timeLeft = Math.max(0, phases[currentPhaseIndex].duration - elapsed);
-        
-        if (timeLeft <= 0) {
-            clearInterval(timer);
-            timer = null;
-            playAlert();
-            moveToNextPhase();
-        }
-        
-        updateDisplay();
-        emitTimerState();
-    }, 100);
 }
 
 // Pause task timer
@@ -316,7 +316,7 @@ function pauseTimer() {
         timer = null;
     }
     isPaused = true;
-    emitTimerState();
+    emitPauseTimer();
 }
 
 // Stop timer
@@ -328,7 +328,7 @@ function stopTimer() {
     isPaused = true;
     timeLeft = phases[currentPhaseIndex].duration;
     updateDisplay();
-    emitTimerState();
+    emitResetTimer();
 }
 
 // Reset timer
@@ -342,21 +342,7 @@ function resetTimer() {
     isPaused = true;
     updateDisplay();
     updateTaskGrid();
-    emitTimerState();
-}
-
-// Move to next phase
-function moveToNextPhase() {
-    if (currentPhaseIndex < phases.length - 1) {
-        currentPhaseIndex++;
-        timeLeft = phases[currentPhaseIndex].duration;
-        updateDisplay();
-        updateTaskGrid();
-        startTimer();
-        emitTimerState();
-    } else {
-        stopTimer();
-    }
+    emitResetTimer();
 }
 
 // Handle meeting type change
@@ -371,6 +357,7 @@ function handleMeetingTypeChange() {
         phases = [...meetingConfigs.design];
     }
     updateTaskGrid();
+    emitSetPhases(phases);
 }
 
 // Event Listeners
@@ -379,7 +366,7 @@ startBtn.addEventListener('click', startTimer);
 pauseBtn.addEventListener('click', pauseTimer);
 stopBtn.addEventListener('click', stopTimer);
 resetBtn.addEventListener('click', resetTimer);
-skipBtn.addEventListener('click', () => moveToNextPhase());
+skipBtn.addEventListener('click', () => skipTask());
 addTaskBtn.addEventListener('click', addTask);
 
 // Initialize
