@@ -30,11 +30,9 @@ let timer = null;
 let timeLeft = 0;
 let currentPhaseIndex = 0;
 let phases = [];
-let isPaused = false;
-let pausedTime = 0;
+let isPaused = true;
 let startTime = 0;
-let elapsedTime = 0;
-let lastUpdateTime = 0;
+let isLocalUpdate = false;
 
 // Meeting type configurations
 const meetingConfigs = {
@@ -63,6 +61,13 @@ socket.on('connect', () => {
 
 socket.on('timerState', (state) => {
     console.log('Received timer state:', state);
+    
+    // Ignore updates if this is a local update
+    if (isLocalUpdate) {
+        isLocalUpdate = false;
+        return;
+    }
+
     if (state.phases.length > 0) {
         // Clear existing timer
         if (timer) {
@@ -75,7 +80,6 @@ socket.on('timerState', (state) => {
         currentPhaseIndex = state.currentPhaseIndex;
         timeLeft = state.timeLeft;
         isPaused = state.isPaused;
-        lastUpdateTime = Date.now();
         
         // Update UI
         updateDisplay();
@@ -90,6 +94,7 @@ socket.on('timerState', (state) => {
 
 // Emit timer state updates
 function emitTimerState() {
+    isLocalUpdate = true;
     const state = {
         currentPhaseIndex,
         timeLeft,
@@ -220,6 +225,7 @@ function addTask() {
     };
     phases.push(task);
     updateTaskGrid();
+    emitTimerState();
 }
 
 // Remove task
@@ -232,6 +238,7 @@ function removeTask(index) {
         currentPhaseIndex--;
     }
     updateTaskGrid();
+    emitTimerState();
 }
 
 // Start task timer
@@ -241,8 +248,6 @@ function startTaskTimer(index) {
     }
     currentPhaseIndex = index;
     timeLeft = phases[index].duration;
-    pausedTime = 0;
-    elapsedTime = 0;
     updateDisplay();
     startTimer();
     updateTaskGrid();

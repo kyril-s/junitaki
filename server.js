@@ -35,12 +35,13 @@ io.on('connection', (socket) => {
     console.log('New client connected');
 
     socket.on('joinRoom', (roomId) => {
+        console.log(`Client joining room: ${roomId}`);
         socket.join(roomId);
         if (!rooms.has(roomId)) {
             rooms.set(roomId, {
                 currentPhaseIndex: 0,
                 timeLeft: 0,
-                isPaused: false,
+                isPaused: true,
                 phases: []
             });
         }
@@ -50,8 +51,12 @@ io.on('connection', (socket) => {
 
     socket.on('updateTimer', (data) => {
         const { roomId, state } = data;
+        console.log(`Updating room ${roomId}:`, state);
+        
         if (rooms.has(roomId)) {
+            // Update the room state
             rooms.set(roomId, state);
+            // Broadcast to all clients in the room except the sender
             socket.to(roomId).emit('timerState', state);
         }
     });
