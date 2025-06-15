@@ -440,16 +440,28 @@ addTaskBtn.addEventListener('click', addTask);
 handleMeetingTypeChange();
 
 // Copy room link to clipboard
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 2000);
+}
+
 function copyRoomLink() {
     const roomLink = window.location.href;
     navigator.clipboard.writeText(roomLink).then(() => {
         const copyBtn = document.querySelector('.copy-btn');
-        if (!copyBtn) return;
-        const originalIcon = copyBtn.innerHTML;
-        copyBtn.innerHTML = '<i class="fas fa-check"></i>';
-        setTimeout(() => {
-            copyBtn.innerHTML = originalIcon;
-        }, 2000);
+        if (copyBtn) {
+            const originalIcon = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => {
+                copyBtn.innerHTML = originalIcon;
+            }, 2000);
+        }
+        showToast('Room link copied!');
     });
 }
 

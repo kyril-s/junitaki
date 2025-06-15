@@ -184,6 +184,8 @@ html, body {
 .meeting-type label {
   font-weight: 500;
   margin-right: var(--space-sm);
+  margin-left: var(--space-sm);
+
 }
 .meeting-type select {
   font-size: var(--font-size-base);
@@ -201,7 +203,7 @@ html, body {
 }
 
 .task-card {
-  background: var(--color-surface);
+  background: var(--color-surface-alt);
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
   box-shadow: 0 1px 4px var(--color-shadow);
@@ -568,4 +570,29 @@ html, body {
     flex-direction: column;
     gap: var(--space-sm);
   }
+}
+
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+  min-width: 180px;
+  max-width: 80vw;
+  background: var(--color-primary);
+  color: #fff;
+  padding: 16px 32px;
+  border-radius: var(--border-radius-lg);
+  font-size: 1.1rem;
+  font-weight: 500;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transition: opacity 0.3s, bottom 0.3s;
+}
+#toast.show {
+  opacity: 1;
+  bottom: 60px;
+  pointer-events: auto;
 } 
