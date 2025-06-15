@@ -32,6 +32,8 @@ let currentPhaseIndex = 0;
 let phases = [];
 let isPaused = true;
 let startTime = 0;
+let lastSentTimeLeft = null;
+let lastReceivedState = {};
 
 // Meeting type configurations
 const meetingConfigs = {
@@ -56,28 +58,26 @@ const meetingConfigs = {
 socket.on('connect', () => {
     console.log('Connected to server');
     socket.emit('joinRoom', roomId);
+    // Always display the room ID after joining
+    document.getElementById('roomId').textContent = roomId;
 });
 
 socket.on('timerState', (state) => {
-    console.log('Received timer state:', state);
-    
-    // Update local state from server
+    // Only update if state is different from last received
+    if (JSON.stringify(state) === JSON.stringify(lastReceivedState)) return;
+    lastReceivedState = JSON.parse(JSON.stringify(state));
+
     phases = state.phases;
     currentPhaseIndex = state.currentPhaseIndex;
     timeLeft = state.timeLeft;
     isPaused = state.isPaused;
-    
-    // Clear any running timer
+
     if (timer) {
         clearInterval(timer);
         timer = null;
     }
-
-    // Update UI
     updateDisplay();
     updateTaskGrid();
-    
-    // Start timer if not paused
     if (!isPaused && phases.length > 0) {
         startTimerInterval();
     }
@@ -120,7 +120,8 @@ function startTimerInterval() {
         const now = Date.now();
         const elapsed = Math.floor((now - startTime) / 1000);
         const newTimeLeft = Math.max(0, phases[currentPhaseIndex].duration - elapsed);
-        if (newTimeLeft !== timeLeft) {
+        if (newTimeLeft !== timeLeft && newTimeLeft !== lastSentTimeLeft) {
+            lastSentTimeLeft = newTimeLeft;
             emitUpdateTimeLeft(newTimeLeft);
         }
         if (newTimeLeft <= 0) {
@@ -292,7 +293,6 @@ function updateDisplay() {
     if (phases.length > 0) {
         currentPhaseDisplay.textContent = phases[currentPhaseIndex].name;
     }
-    emitUpdateTimeLeft(timeLeft);
 }
 
 // Play alert sound
@@ -362,7 +362,7 @@ function handleMeetingTypeChange() {
 
 // Event Listeners
 meetingTypeSelect.addEventListener('change', handleMeetingTypeChange);
-startBtn.addEventListener('click', startTimer);
+startBtn.addEventListener('click', () => emitStartTimer(currentPhaseIndex));
 pauseBtn.addEventListener('click', pauseTimer);
 stopBtn.addEventListener('click', stopTimer);
 resetBtn.addEventListener('click', resetTimer);
