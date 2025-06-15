@@ -9,7 +9,7 @@ html, body {
   padding: 0;
 }
 body {
-  background: var(--color-surface);
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9e4f0 100%);
   color: var(--color-onSurface);
   font-family: 'Segoe UI', Arial, sans-serif;
   font-size: var(--font-size-base);
@@ -24,16 +24,17 @@ body {
   align-items: flex-start;
   justify-content: flex-start;
   gap: var(--gap);
-  margin-top: var(--space-md);
+  margin: var(--space-lg) auto;
   width: 100%;
-  max-width: 100vw;
-  padding: 0 var(--space-lg) var(--space-lg) var(--space-lg);
+  max-width: 1200px;
+  padding: 0;
   box-sizing: border-box;
+  background: none;
 }
 .cards-column, .timer-column {
   flex: 1 1 0;
   min-width: 0;
-  max-width: none;
+  max-width: 600px;
   align-items: flex-start;
   display: flex;
   flex-direction: column;
@@ -117,7 +118,7 @@ body {
   min-width: 0;
   max-width: 600px;
   background: var(--color-surface-alt);
-  border-radius: var(--border-radius);
+  border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow);
   padding: var(--space-lg);
   margin-bottom: var(--space-lg);
@@ -509,6 +510,7 @@ body {
     align-items: stretch;
     margin-top: var(--space-md);
     flex-wrap: wrap;
+    max-width: 100vw;
     padding: 0 var(--space-md) var(--space-md) var(--space-md);
   }
   .cards-column, .timer-column {
