@@ -29,7 +29,26 @@ const io = socketIo(server, {
 });
 
 const animalNames = [
-    "Zorro", "Lobo", "Gato", "Perro", "Oso", "Águila", "Tigre", "León", "Conejo", "Ratón", "Caballo", "Vaca", "Cerdo", "Mono", "Pato", "Pez", "Tortuga", "Serpiente", "Cangrejo", "Pulpo"
+    "Shadowfox",
+    "Moonwolf",
+    "Nightcat",
+    "Guarddog",
+    "Ironbear",
+    "Skyeagle",
+    "Flamepaw",
+    "Sunlion",
+    "Swiftbun",
+    "Tinywhisk",
+    "Wildhoof",
+    "Meadowcow",
+    "Oakpig",
+    "Treeclimb",
+    "Riverquack",
+    "Deepfin",
+    "Shellshield",
+    "Vipercoil",
+    "Clawpinch",
+    "Tentawave"
 ];
 
 function getRandomAnimalName(usedNames = []) {
