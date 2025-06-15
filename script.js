@@ -39,6 +39,9 @@ let isMaster = false;
 let clientList = [];
 let masterId = null;
 
+// Collapse state for each card (not synced, local only)
+let cardCollapseState = [];
+
 // Meeting type configurations
 const meetingConfigs = {
     critique: [
@@ -196,25 +199,28 @@ function formatTime(seconds) {
 function createTaskCard(task, index) {
     const isActive = index === currentPhaseIndex && timer !== null;
     const disabledAttr = isMaster ? '' : 'disabled';
+    const collapsed = cardCollapseState[index];
     return `
-    <div class="task-card ${isActive ? 'active' : ''}" data-index="${index}">
+    <div class="task-card${isActive ? ' active' : ''}${collapsed ? ' collapsed' : ''}" data-index="${index}">
         <div class="task-card-content">
             <div class="task-header">
+                <span class="chevron">&#9660;</span>
                 <input type="text" class="task-name" id="task-name-${index}" name="task-name-${index}" value="${task.name}" placeholder="Task name">
             </div>
-            <div class="time-input">
-            <input type="text" class="minutes" id="minutes-${index}" name="minutes-${index}" value="${Math.floor(task.duration / 60)}" maxlength="2" placeholder="00">
-            <span>:</span>
-            <input type="text" class="seconds" id="seconds-${index}" name="seconds-${index}" value="${task.duration % 60}" maxlength="2" placeholder="00">
-            </div>
-        </div>
-            <div class="task-controls">
-                ${isActive ? 
+            <div class="task-details" style="display: ${collapsed ? 'none' : 'flex'}; flex-direction: column; gap: 8px;">
+                <div class="time-input">
+                    <input type="text" class="minutes" id="minutes-${index}" name="minutes-${index}" value="${Math.floor(task.duration / 60)}" maxlength="2" placeholder="00">
+                    <span>:</span>
+                    <input type="text" class="seconds" id="seconds-${index}" name="seconds-${index}" value="${task.duration % 60}" maxlength="2" placeholder="00">
+                </div>
+                <div class="task-controls">
+                    ${isActive ? 
                         `<button class="task-control-btn pause-btn" onclick="pauseTaskTimer(${index})" title="Pause Task" ${disabledAttr}>⏸</button>` :
                         `<button class="task-control-btn play-btn" onclick="startTaskTimer(${index})" title="Start Task" ${disabledAttr}>▶</button>`
                     }
                     <button class="task-control-btn skip-btn" onclick="skipTask(${index})" title="Skip Task" ${disabledAttr}>⏭</button>
                     <button class="task-control-btn delete-btn" onclick="removeTask(${index})" title="Delete Task" ${disabledAttr}>×</button>
+                </div>
             </div>
         </div>
     </div>
@@ -223,6 +229,10 @@ function createTaskCard(task, index) {
 
 // Update task grid display
 function updateTaskGrid() {
+    // Ensure collapse state array matches phases length
+    if (!Array.isArray(cardCollapseState) || cardCollapseState.length !== phases.length) {
+        cardCollapseState = Array(phases.length).fill(false);
+    }
     taskGrid.innerHTML = phases.map((task, index) => createTaskCard(task, index)).join('');
     attachTaskInputListeners();
     updateTimerVisibility();
@@ -248,13 +258,15 @@ function scrollToControls() {
     document.querySelector('.controls-container').scrollIntoView({ behavior: 'smooth' });
 }
 
-// Attach event listeners to task inputs
+// Attach event listeners to task inputs and chevrons
 function attachTaskInputListeners() {
     document.querySelectorAll('.task-card').forEach(card => {
         const index = parseInt(card.dataset.index);
         const nameInput = card.querySelector('.task-name');
         const minutesInput = card.querySelector('.minutes');
         const secondsInput = card.querySelector('.seconds');
+        const chevron = card.querySelector('.chevron');
+        const details = card.querySelector('.task-details');
 
         nameInput.addEventListener('change', (e) => {
             const task = { ...phases[index], name: e.target.value };
@@ -285,6 +297,15 @@ function attachTaskInputListeners() {
                 updateDisplay();
             }
         });
+
+        // Chevron toggle
+        if (chevron && details) {
+            chevron.addEventListener('click', () => {
+                cardCollapseState[index] = !cardCollapseState[index];
+                card.classList.toggle('collapsed');
+                details.style.display = cardCollapseState[index] ? 'none' : 'flex';
+            });
+        }
     });
 }
 
@@ -457,13 +478,16 @@ function updateUserInfoBar() {
             }
         });
         html += '</select>';
-        html += '<button id="passMasterBtn">Pass Master</button>';
+        // No button
     }
     infoBar.innerHTML = html;
     if (isMaster && clientList.length > 1) {
-        document.getElementById('passMasterBtn').onclick = () => {
-            const toId = document.getElementById('passMasterSelect').value;
-            socket.emit('passMaster', { roomId, toId });
-        };
+        const select = document.getElementById('passMasterSelect');
+        if (select) {
+            select.onchange = () => {
+                const toId = select.value;
+                socket.emit('passMaster', { roomId, toId });
+            };
+        }
     }
 } 

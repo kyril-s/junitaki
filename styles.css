@@ -40,12 +40,30 @@ body {
 }
 
 .container {
-  max-width: 900px;
+  max-width: 1200px;
   margin: var(--space-lg) auto;
-  background: var(--color-surface-alt);
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow);
-  padding: var(--space-lg);
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  display: flex;
+  flex-direction: row;
+  gap: var(--gap);
+}
+
+/* Column layout: cards left, timer right */
+.cards-column {
+  flex: 2 1 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+.timer-column {
+  flex: 1 1 350px;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
 
 #userInfoBar {
@@ -146,8 +164,8 @@ body {
 }
 
 .task-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: var(--gap);
   margin-bottom: var(--space-md);
   padding: var(--space-sm);
@@ -163,10 +181,30 @@ body {
   flex-direction: column;
   gap: var(--space-sm);
   transition: box-shadow 0.2s;
+  position: relative;
 }
-.task-card.active {
-  border-color: var(--color-primary);
-  box-shadow: 0 2px 8px var(--color-primary-hover);
+.task-card.collapsed {
+  padding-bottom: var(--space-sm);
+  gap: 0;
+}
+.task-card .task-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+.task-card .task-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.task-card .task-header .chevron {
+  cursor: pointer;
+  font-size: 1.2em;
+  margin-right: var(--space-sm);
+  transition: transform 0.2s;
+}
+.task-card.collapsed .task-header .chevron {
+  transform: rotate(-90deg);
 }
 .task-header input.task-name {
   font-size: var(--font-size-lg);
@@ -175,12 +213,15 @@ body {
   border-radius: var(--border-radius);
   padding: var(--space-xs) var(--space-sm);
   width: 100%;
+  min-width: 0;
   background: var(--color-surface-alt);
   color: var(--color-onSurface);
+  flex: 1 1 0;
 }
 .task-header input.task-name:focus {
   outline: 2px solid var(--color-primary);
 }
+
 .time-input {
   display: flex;
   align-items: center;
@@ -210,6 +251,7 @@ body {
   font-size: var(--font-size-base);
   cursor: pointer;
   transition: background 0.2s;
+  margin-top: var(--space-md);
 }
 .add-task-btn:hover:not(:disabled) {
   background: var(--color-primary-hover);
@@ -219,7 +261,7 @@ body {
   cursor: not-allowed;
 }
 
-.control-btn {
+.control-btn, .timer-buttons-main button, .timer-buttons-other button {
   padding: var(--space-sm) var(--space-lg);
   border: none;
   border-radius: var(--border-radius);
@@ -234,6 +276,11 @@ body {
   min-width: 100px;
   justify-content: center;
   box-shadow: 0 1px 2px var(--color-shadow);
+  margin-right: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+.control-btn:last-child, .timer-buttons-main button:last-child, .timer-buttons-other button:last-child {
+  margin-right: 0;
 }
 .control-btn i {
   font-size: 1.1rem;
@@ -293,7 +340,16 @@ body {
   gap: var(--gap);
   flex-wrap: wrap;
 }
+.timer-buttons-main, .timer-buttons-other {
+  display: flex;
+  gap: var(--space-sm);
+}
 
+.task-controls {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
 .task-control-btn {
   padding: var(--space-xs) var(--space-sm);
   border: none;
@@ -361,6 +417,15 @@ body {
   margin-bottom: var(--space-md);
 }
 
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+  .timer-column {
+    min-width: 0;
+  }
+}
 @media (max-width: 700px) {
   .container {
     padding: var(--space-sm);
@@ -371,8 +436,10 @@ body {
   .timer-container {
     padding: var(--space-md);
   }
+  .cards-column {
+    gap: var(--space-sm);
+  }
   .task-grid {
-    grid-template-columns: 1fr;
     gap: var(--space-sm);
   }
   .timer-controls {
