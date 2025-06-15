@@ -34,6 +34,7 @@ let isPaused = false;
 let pausedTime = 0;
 let startTime = 0;
 let elapsedTime = 0;
+let lastUpdateTime = 0;
 
 // Meeting type configurations
 const meetingConfigs = {
@@ -61,33 +62,44 @@ socket.on('connect', () => {
 });
 
 socket.on('timerState', (state) => {
+    console.log('Received timer state:', state);
     if (state.phases.length > 0) {
+        // Clear existing timer
+        if (timer) {
+            clearInterval(timer);
+            timer = null;
+        }
+
+        // Update local state
         phases = state.phases;
         currentPhaseIndex = state.currentPhaseIndex;
         timeLeft = state.timeLeft;
         isPaused = state.isPaused;
+        lastUpdateTime = Date.now();
         
-        if (isPaused) {
-            pauseTimer();
-        } else if (timer === null && timeLeft > 0) {
-            startTimer();
-        }
-        
+        // Update UI
         updateDisplay();
         updateTaskGrid();
+        
+        // Start timer if not paused
+        if (!isPaused && timeLeft > 0) {
+            startTimer();
+        }
     }
 });
 
 // Emit timer state updates
 function emitTimerState() {
+    const state = {
+        currentPhaseIndex,
+        timeLeft,
+        isPaused,
+        phases
+    };
+    console.log('Emitting timer state:', state);
     socket.emit('updateTimer', {
         roomId,
-        state: {
-            currentPhaseIndex,
-            timeLeft,
-            isPaused,
-            phases
-        }
+        state
     });
 }
 
@@ -260,36 +272,28 @@ function playAlert() {
 
 // Start timer
 function startTimer() {
-    if (timer || phases.length === 0) return;
-    
-    isPaused = false;
-    startBtn.disabled = true;
-    pauseBtn.disabled = false;
-    stopBtn.disabled = false;
-    
-    if (pausedTime > 0) {
-        startTime = Date.now() - pausedTime;
-    } else {
-        startTime = Date.now();
-        elapsedTime = 0;
+    if (timer) {
+        clearInterval(timer);
     }
     
-    timer = setInterval(() => {
-        elapsedTime = Date.now() - startTime;
-        timeLeft = Math.max(0, phases[currentPhaseIndex].duration - Math.floor(elapsedTime / 1000));
-        
-        if (timeLeft === 30) {
-            playAlert();
-        }
-        
-        if (timeLeft === 0) {
-            moveToNextPhase();
-        } else {
-            updateDisplay();
-        }
-    }, 1000);
+    isPaused = false;
+    startTime = Date.now() - (phases[currentPhaseIndex].duration - timeLeft) * 1000;
     
-    emitTimerState();
+    timer = setInterval(() => {
+        const now = Date.now();
+        const elapsed = Math.floor((now - startTime) / 1000);
+        timeLeft = Math.max(0, phases[currentPhaseIndex].duration - elapsed);
+        
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            timer = null;
+            playAlert();
+            moveToNextPhase();
+        }
+        
+        updateDisplay();
+        emitTimerState();
+    }, 100);
 }
 
 // Pause task timer
@@ -302,63 +306,51 @@ function pauseTaskTimer(index) {
 
 // Pause timer
 function pauseTimer() {
-    if (!timer) return;
-    
+    if (timer) {
+        clearInterval(timer);
+        timer = null;
+    }
     isPaused = true;
-    clearInterval(timer);
-    timer = null;
-    startBtn.disabled = false;
-    pauseBtn.disabled = true;
-    stopBtn.disabled = false;
-    
-    pausedTime = elapsedTime;
-    updateTaskGrid();
-    scrollToControls();
     emitTimerState();
 }
 
 // Stop timer
 function stopTimer() {
-    if (!timer && !isPaused) return;
-    
-    clearInterval(timer);
-    timer = null;
-    isPaused = false;
-    pausedTime = 0;
-    elapsedTime = 0;
+    if (timer) {
+        clearInterval(timer);
+        timer = null;
+    }
+    isPaused = true;
     timeLeft = phases[currentPhaseIndex].duration;
-    startBtn.disabled = false;
-    pauseBtn.disabled = true;
-    stopBtn.disabled = true;
     updateDisplay();
-    updateTaskGrid();
-    scrollToControls();
     emitTimerState();
 }
 
 // Reset timer
 function resetTimer() {
-    stopTimer();
-    currentPhaseIndex = 0;
-    if (phases.length > 0) {
-        timeLeft = phases[0].duration;
+    if (timer) {
+        clearInterval(timer);
+        timer = null;
     }
+    currentPhaseIndex = 0;
+    timeLeft = phases[0].duration;
+    isPaused = true;
     updateDisplay();
     updateTaskGrid();
+    emitTimerState();
 }
 
 // Move to next phase
 function moveToNextPhase() {
-    currentPhaseIndex++;
-    if (currentPhaseIndex < phases.length) {
+    if (currentPhaseIndex < phases.length - 1) {
+        currentPhaseIndex++;
         timeLeft = phases[currentPhaseIndex].duration;
-        pausedTime = 0;
-        elapsedTime = 0;
         updateDisplay();
         updateTaskGrid();
+        startTimer();
+        emitTimerState();
     } else {
-        pauseTimer();
-        alert('Meeting completed!');
+        stopTimer();
     }
 }
 
