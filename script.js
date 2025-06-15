@@ -454,14 +454,6 @@ function copyRoomLink() {
 // Update room ID display
 document.getElementById('roomId').textContent = roomId;
 
-// Add UI for user name and master status
-document.addEventListener('DOMContentLoaded', () => {
-    const infoBar = document.createElement('div');
-    infoBar.id = 'userInfoBar';
-    infoBar.style.margin = '10px 0';
-    document.querySelector('.container').insertBefore(infoBar, document.querySelector('.controls-container'));
-});
-
 function updateUserInfoBar() {
     const infoBar = document.getElementById('userInfoBar');
     if (!infoBar) return;
