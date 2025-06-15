@@ -101,8 +101,26 @@ socket.on('roomClients', ({ clients, master }) => {
     isMaster = (masterId === socket.id);
     updateUserInfoBar();
     // Show/hide controls based on master status
-    const controls = document.querySelectorAll('.control-btn, .task-control-btn, #addTaskBtn');
-    controls.forEach(btn => {
+    // Disable Add Task button
+    if (addTaskBtn) {
+        if (isMaster) {
+            addTaskBtn.removeAttribute('disabled');
+        } else {
+            addTaskBtn.setAttribute('disabled', 'disabled');
+        }
+    }
+    // Disable timer controls
+    [startBtn, pauseBtn, stopBtn, resetBtn, skipBtn].forEach(btn => {
+        if (btn) {
+            if (isMaster) {
+                btn.removeAttribute('disabled');
+            } else {
+                btn.setAttribute('disabled', 'disabled');
+            }
+        }
+    });
+    // Disable all task card controls
+    document.querySelectorAll('.task-control-btn').forEach(btn => {
         if (isMaster) {
             btn.removeAttribute('disabled');
         } else {
@@ -177,6 +195,7 @@ function formatTime(seconds) {
 // Create task card HTML
 function createTaskCard(task, index) {
     const isActive = index === currentPhaseIndex && timer !== null;
+    const disabledAttr = isMaster ? '' : 'disabled';
     return `
     <div class="task-card ${isActive ? 'active' : ''}" data-index="${index}">
         <div class="task-card-content">
@@ -191,11 +210,11 @@ function createTaskCard(task, index) {
         </div>
             <div class="task-controls">
                 ${isActive ? 
-                        `<button class="task-control-btn pause-btn" onclick="pauseTaskTimer(${index})" title="Pause Task">⏸</button>` :
-                        `<button class="task-control-btn play-btn" onclick="startTaskTimer(${index})" title="Start Task">▶</button>`
+                        `<button class="task-control-btn pause-btn" onclick="pauseTaskTimer(${index})" title="Pause Task" ${disabledAttr}>⏸</button>` :
+                        `<button class="task-control-btn play-btn" onclick="startTaskTimer(${index})" title="Start Task" ${disabledAttr}>▶</button>`
                     }
-                    <button class="task-control-btn skip-btn" onclick="skipTask(${index})" title="Skip Task">⏭</button>
-                    <button class="task-control-btn delete-btn" onclick="removeTask(${index})" title="Delete Task">×</button>
+                    <button class="task-control-btn skip-btn" onclick="skipTask(${index})" title="Skip Task" ${disabledAttr}>⏭</button>
+                    <button class="task-control-btn delete-btn" onclick="removeTask(${index})" title="Delete Task" ${disabledAttr}>×</button>
             </div>
         </div>
     </div>
@@ -425,12 +444,12 @@ document.addEventListener('DOMContentLoaded', () => {
 function updateUserInfoBar() {
     const infoBar = document.getElementById('userInfoBar');
     if (!infoBar) return;
-    let html = `<b>Tu nombre:</b> ${myName ? myName : ''}`;
+    let html = `<b>Your name:</b> ${myName ? myName : ''}`;
     if (isMaster) {
         html += ' <span style="color: #4CAF50;">(Room Master)</span>';
     }
     if (clientList.length > 1 && isMaster) {
-        html += '<br><label for="passMasterSelect">Pasar control a: </label>';
+        html += '<br><label for="passMasterSelect">Pass control to: </label>';
         html += '<select id="passMasterSelect">';
         clientList.forEach(c => {
             if (c.id !== socket.id) {
@@ -438,7 +457,7 @@ function updateUserInfoBar() {
             }
         });
         html += '</select>';
-        html += '<button id="passMasterBtn">Pasar Master</button>';
+        html += '<button id="passMasterBtn">Pass Master</button>';
     }
     infoBar.innerHTML = html;
     if (isMaster && clientList.length > 1) {
